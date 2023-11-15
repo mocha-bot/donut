@@ -2,7 +2,7 @@
 
 ## Description
 
-A way to call a function with a donut.
+A way to drink a mocha with a donut.
 
 ## Example Result
 
