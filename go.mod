@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1
+	github.com/gofrs/uuid/v5 v5.0.0
 	github.com/rs/zerolog v1.31.0
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/postgres v1.5.4

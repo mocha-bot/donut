@@ -3,6 +3,23 @@ package main
 import (
 	"fmt"
 	"time"
+
+	"github.com/gofrs/uuid/v5"
+)
+
+type MatchMakerStatus string
+
+const (
+	MatchMakerStatusPending  MatchMakerStatus = "pending"
+	MatchMakerStatusRunning  MatchMakerStatus = "running"
+	MatchMakerStatusFinished MatchMakerStatus = "finished"
+)
+
+type MatchMakerUserStatus string
+
+const (
+	MatchMakerUserStatusPending  MatchMakerUserStatus = "pending"
+	MatchMakerUserStatusFinished MatchMakerUserStatus = "finished"
 )
 
 type Person struct {
@@ -41,6 +58,10 @@ type MatchMakerEntity struct {
 	Duration    time.Duration
 }
 
+func (m *MatchMakerEntity) GenerateSerial() {
+	m.Serial = uuid.Must(uuid.NewV7()).String()
+}
+
 type MatchMakerEntityOption func(*MatchMakerEntity)
 
 func WithMatchMakerEntityName(name string) MatchMakerEntityOption {
@@ -67,13 +88,11 @@ func WithMatchMakerEntityDuration(duration time.Duration) MatchMakerEntityOption
 	}
 }
 
-func (m *MatchMakerEntity) ApplyOptions(options ...MatchMakerEntityOption) {
+func (m *MatchMakerEntity) Build(options ...MatchMakerEntityOption) {
+	m.GenerateSerial()
+
 	for _, opt := range options {
 		opt(m)
-	}
-
-	if m.Serial == "" {
-		m.Serial = fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 
 	if m.StartTime.IsZero() {
@@ -87,4 +106,29 @@ func (m *MatchMakerEntity) ApplyOptions(options ...MatchMakerEntityOption) {
 	if m.Name == "" {
 		m.Name = fmt.Sprintf("MatchMaker-%s", m.Serial)
 	}
+}
+
+type MatchMakerUserEntity struct {
+	MatchMakerSerial string
+	Serial           string
+	Username         string
+	Status           MatchMakerUserStatus
+}
+
+type MatchMakerUserEntities []*MatchMakerUserEntity
+
+func (m MatchMakerUserEntities) ToPeople() People {
+	var people People
+	for _, matchMakerUser := range m {
+		if matchMakerUser == nil {
+			continue
+		}
+		people = append(people, &Person{Name: matchMakerUser.Username})
+	}
+	return people
+}
+
+type MatchMakerInformation struct {
+	MatchMaker *MatchMakerEntity
+	Users      MatchMakerUserEntities
 }

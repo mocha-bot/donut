@@ -2,12 +2,11 @@ package main
 
 import "time"
 
-type MatchMakerStatus string
-
 const (
-	MatchMakerStatusPending  MatchMakerStatus = "pending"
-	MatchMakerStatusRunning  MatchMakerStatus = "running"
-	MatchMakerStatusFinished MatchMakerStatus = "finished"
+	MatchMakerSerialColumn = "matchmaker_serial"
+	UsernameColumn         = "username"
+	SerialColumn           = "serial"
+	StatusColumn           = "status"
 )
 
 type MatchMaker struct {
@@ -15,6 +14,7 @@ type MatchMaker struct {
 	Serial      string `gorm:"uniqueIndex"`
 	Name        string
 	Description string
+	Status      MatchMakerStatus
 	StartTime   time.Time
 	EndTime     time.Time
 }
@@ -32,6 +32,7 @@ func (MatchMaker) FromEntity(entity *MatchMakerEntity) *MatchMaker {
 		Serial:      entity.Serial,
 		Name:        entity.Name,
 		Description: entity.Description,
+		Status:      MatchMakerStatusPending,
 		StartTime:   entity.StartTime,
 		EndTime:     entity.StartTime.Add(entity.Duration),
 	}
@@ -56,5 +57,56 @@ type MatchMakerUser struct {
 	MatchMakerSerial string
 	Serial           string `gorm:"uniqueIndex"`
 	Username         string
-	Status           MatchMakerStatus
+	Status           MatchMakerUserStatus
+	DeletedAt        *time.Time
+}
+
+func (m *MatchMakerUser) FromEntity(entity *MatchMakerUserEntity) *MatchMakerUser {
+	if entity == nil {
+		return nil
+	}
+
+	return &MatchMakerUser{
+		MatchMakerSerial: entity.MatchMakerSerial,
+		Serial:           entity.Serial,
+		Username:         entity.Username,
+		Status:           MatchMakerUserStatusPending,
+	}
+}
+
+func (m *MatchMakerUser) ToEntity() *MatchMakerUserEntity {
+	if m == nil {
+		return nil
+	}
+
+	return &MatchMakerUserEntity{
+		MatchMakerSerial: m.MatchMakerSerial,
+		Serial:           m.Serial,
+		Username:         m.Username,
+		Status:           m.Status,
+	}
+}
+
+type MatchMakerUsers []*MatchMakerUser
+
+func (m MatchMakerUsers) FromEntities(entities MatchMakerUserEntities) MatchMakerUsers {
+	var matchMakerUsers MatchMakerUsers
+	for _, entity := range entities {
+		if entity == nil {
+			continue
+		}
+		matchMakerUsers = append(matchMakerUsers, (&MatchMakerUser{}).FromEntity(entity))
+	}
+	return matchMakerUsers
+}
+
+func (m MatchMakerUsers) ToEntities() MatchMakerUserEntities {
+	var entities MatchMakerUserEntities
+	for _, matchMakerUser := range m {
+		if matchMakerUser == nil {
+			continue
+		}
+		entities = append(entities, matchMakerUser.ToEntity())
+	}
+	return entities
 }

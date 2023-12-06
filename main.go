@@ -29,13 +29,15 @@ func main() {
 	dcRepo := NewDonutRepository(db)
 	dc := NewDonutCall(dcRepo)
 
-	dc.CreateMatchMaker(
-		ctx,
+	matchMaker := &MatchMakerEntity{}
+	matchMaker.Build(
 		WithMatchMakerEntityName("test"),
 		WithMatchMakerEntityDescription("test description"),
 		WithMatchMakerEntityStartTime(time.Now()),
 		WithMatchMakerEntityDuration(10*24*time.Hour),
 	)
+
+	dc.CreateMatchMaker(ctx, matchMaker)
 
 	<-time.After(10 * time.Second)
 

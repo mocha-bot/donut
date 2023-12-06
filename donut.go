@@ -2,217 +2,177 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
 )
 
 type donutCall struct {
-	People    People
-	PeopleMap PeopleMap
-	MatchMap  MatchMap
-
 	repo DonutRepository
 }
 
 type DonutCall interface {
-	Register(name string)
-	Start()
-	Pair()
-	RePair()
-	PairPeople(person1 *Person, person2 *Person)
-	DoCall(person1 *Person, person2 *Person)
-	AddPerson(name string)
-	RemovePerson(name string)
-	GetPerson(name string) *Person
-	Print()
-	CreateMatchMaker(ctx context.Context, options ...MatchMakerEntityOption) (string, error)
+	// Pair()
+	// RePair()
+
+	CreateMatchMaker(ctx context.Context, matchMaker *MatchMakerEntity) (string, error)
+
+	DoCall(ctx context.Context, matchMakerSerial string, people People) error
+	Start(ctx context.Context, matchMakerSerial string) error
+
+	GetInformation(ctx context.Context, matchMakerSerial string) (*MatchMakerInformation, error)
+
+	GetPeople(ctx context.Context, matchMakerSerial string) (People, error)
+	GetFinishedPeople(ctx context.Context, matchMakerSerial string) (People, error)
+	GetPendingPeople(ctx context.Context, matchMakerSerial string) (People, error)
+
+	RegisterUser(ctx context.Context, people MatchMakerUserEntities) error
+	UnRegisterUser(ctx context.Context, people MatchMakerUserEntities) error
 }
 
 func NewDonutCall(donutRepository DonutRepository) DonutCall {
 	return &donutCall{
-		People:    make(People, 0),
-		PeopleMap: make(map[string]bool),
-		MatchMap:  make(map[string]string),
-		repo:      donutRepository,
+		repo: donutRepository,
 	}
 }
 
-func (dc *donutCall) Register(name string) {
-	if dc.PeopleMap[name] {
-		return
-	}
+// func (dc *donutCall) Pair() {
+// 	// round-robin balancing
+// 	length := len(dc.People)
 
-	dc.People = append(dc.People, &Person{Name: name})
-}
+// 	people := make(People, length)
+// 	copy(people, dc.People)
 
-func (dc *donutCall) Start() {
-	// now := time.Now()
-	// if dc.StartAt.After(now) {
-	// 	return
-	// }
+// 	for length >= 0 {
+// 		if length == 0 {
+// 			break
+// 		}
 
-	dc.Pair()
-}
+// 		p1Idx := rand.Intn(length - 1)
+// 		p2Idx := rand.Intn(length - 1)
 
-func (dc *donutCall) Pair() {
-	// round-robin balancing
-	length := len(dc.People)
+// 		// make sure p1 and p2 are not the same person
+// 		for p1Idx == p2Idx {
+// 			p2Idx = rand.Intn(length)
+// 		}
 
-	people := make(People, length)
-	copy(people, dc.People)
+// 		person1 := people[p1Idx]
+// 		person2 := people[p2Idx]
 
-	for length >= 0 {
-		if length == 0 {
-			break
-		}
+// 		// remove paired people from the list of available people
+// 		people = append(people[:p1Idx], people[p1Idx+1:]...)
+// 		if p1Idx < p2Idx {
+// 			p2Idx--
+// 		}
+// 		people = append(people[:p2Idx], people[p2Idx+1:]...)
 
-		p1Idx := rand.Intn(length - 1)
-		p2Idx := rand.Intn(length - 1)
+// 		dc.PairPeople(person1, person2)
+// 		length -= 2
 
-		// make sure p1 and p2 are not the same person
-		for p1Idx == p2Idx {
-			p2Idx = rand.Intn(length)
-		}
+// 		if p1Idx == p2Idx {
+// 			continue
+// 		}
+// 	}
+// }
 
-		person1 := people[p1Idx]
-		person2 := people[p2Idx]
+// func (dc *donutCall) RePair() {
+// 	// do the round-robin balancing again but only for people who have not been paired
+// 	length := len(dc.GetRemaining())
 
-		// remove paired people from the list of available people
-		people = append(people[:p1Idx], people[p1Idx+1:]...)
-		if p1Idx < p2Idx {
-			p2Idx--
-		}
-		people = append(people[:p2Idx], people[p2Idx+1:]...)
+// 	people := make(People, length)
+// 	copy(people, dc.GetRemaining())
 
-		dc.PairPeople(person1, person2)
-		length -= 2
+// 	for length >= 0 {
+// 		if length == 0 {
+// 			break
+// 		}
 
-		if p1Idx == p2Idx {
-			continue
-		}
-	}
-}
+// 		// special case, do a 3-way call
+// 		if length == 1 {
+// 			fmt.Println("3-way call", people[0].Name)
+// 			break
+// 		}
 
-func (dc *donutCall) RePair() {
-	// do the round-robin balancing again but only for people who have not been paired
-	length := len(dc.GetRemaining())
+// 		p1Idx := rand.Intn(length - 1)
+// 		p2Idx := rand.Intn(length - 1)
 
-	people := make(People, length)
-	copy(people, dc.GetRemaining())
+// 		// make sure p1 and p2 are not the same person
+// 		for p1Idx == p2Idx {
+// 			p2Idx = rand.Intn(length)
+// 		}
 
-	for length >= 0 {
-		if length == 0 {
-			break
-		}
+// 		person1 := people[p1Idx]
+// 		person2 := people[p2Idx]
 
-		// special case, do a 3-way call
-		if length == 1 {
-			fmt.Println("3-way call", people[0].Name)
-			break
-		}
+// 		// remove paired people from the list of available people
+// 		people = append(people[:p1Idx], people[p1Idx+1:]...)
+// 		if p1Idx < p2Idx {
+// 			p2Idx--
+// 		}
+// 		people = append(people[:p2Idx], people[p2Idx+1:]...)
 
-		p1Idx := rand.Intn(length - 1)
-		p2Idx := rand.Intn(length - 1)
+// 		dc.PairPeople(person1, person2)
+// 		length -= 2
 
-		// make sure p1 and p2 are not the same person
-		for p1Idx == p2Idx {
-			p2Idx = rand.Intn(length)
-		}
+// 		if p1Idx == p2Idx {
+// 			continue
+// 		}
+// 	}
+// }
 
-		person1 := people[p1Idx]
-		person2 := people[p2Idx]
+func (dc *donutCall) DoCall(ctx context.Context, matchMakerSerial string, people People) error {
+	// fmt.Println("Doing call", person1.Name, "with", person2.Name)
 
-		// remove paired people from the list of available people
-		people = append(people[:p1Idx], people[p1Idx+1:]...)
-		if p1Idx < p2Idx {
-			p2Idx--
-		}
-		people = append(people[:p2Idx], people[p2Idx+1:]...)
-
-		dc.PairPeople(person1, person2)
-		length -= 2
-
-		if p1Idx == p2Idx {
-			continue
-		}
-	}
-}
-
-func (dc *donutCall) PairPeople(person1 *Person, person2 *Person) {
-	dc.PeopleMap[person1.Name] = false
-	dc.PeopleMap[person2.Name] = false
-	dc.MatchMap[person1.Name] = person2.Name
-	dc.MatchMap[person2.Name] = person1.Name
-	fmt.Println(person1.Name, "paired with", person2.Name)
-}
-
-func (dc *donutCall) DoCall(person1 *Person, person2 *Person) {
-	fmt.Println(person1.Name, "called", person2.Name)
-	dc.PeopleMap[person1.Name] = true
-	dc.PeopleMap[person2.Name] = true
-}
-
-func (dc *donutCall) AddPerson(name string) {
-	dc.People = append(dc.People, &Person{Name: name})
-	fmt.Println("Added", name)
-}
-
-func (dc *donutCall) RemovePerson(name string) {
-	for i, p := range dc.People {
-		if p.Name == name {
-			fmt.Println("Removed", name)
-			delete(dc.PeopleMap, name)
-			dc.People = append(dc.People[:i], dc.People[i+1:]...)
-			break
-		}
-	}
-}
-
-func (dc *donutCall) GetPerson(name string) *Person {
-	for _, p := range dc.People {
-		if p.Name == name {
-			return p
-		}
-	}
 	return nil
 }
 
-func (dc *donutCall) Print() {
-	fmt.Println("People:", dc.People.Print())
-	fmt.Println("PeopleMap:", dc.PeopleMap)
-	fmt.Println("MatchMap:", dc.MatchMap)
-	fmt.Println("Completed:", dc.GetCompleted().Print())
-	fmt.Println("Remaining:", dc.GetRemaining().Print())
+func (dc *donutCall) Start(ctx context.Context, matchMakerSerial string) error {
+	// dc.Pair()
+	return nil
 }
 
-func (dc *donutCall) GetCompleted() People {
-	var completed People
-	for _, p := range dc.People {
-		if dc.PeopleMap[p.Name] {
-			completed = append(completed, p)
-		}
-	}
-	return completed
+func (dc *donutCall) GetPeople(ctx context.Context, matchMakerSerial string) (People, error) {
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerial(ctx, matchMakerSerial)
+	return matchMakerUsers.ToPeople(), err
 }
 
-func (dc *donutCall) GetRemaining() People {
-	var remaining People
-	for _, p := range dc.People {
-		if !dc.PeopleMap[p.Name] {
-			remaining = append(remaining, p)
-		}
-	}
-	return remaining
+func (dc *donutCall) GetFinishedPeople(ctx context.Context, matchMakerSerial string) (People, error) {
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatus(ctx, matchMakerSerial, MatchMakerUserStatusFinished)
+	return matchMakerUsers.ToPeople(), err
 }
 
-func (dc *donutCall) CreateMatchMaker(ctx context.Context, options ...MatchMakerEntityOption) (string, error) {
-	matchMaker := &MatchMakerEntity{}
-	matchMaker.ApplyOptions(options...)
+func (dc *donutCall) GetPendingPeople(ctx context.Context, matchMakerSerial string) (People, error) {
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatus(ctx, matchMakerSerial, MatchMakerUserStatusPending)
+	return matchMakerUsers.ToPeople(), err
+}
 
+func (dc *donutCall) CreateMatchMaker(ctx context.Context, matchMaker *MatchMakerEntity) (string, error) {
 	err := dc.repo.CreateMatchMaker(ctx, matchMaker)
 	if err != nil {
 		return "", err
 	}
 
 	return matchMaker.Serial, nil
+}
+
+func (dc *donutCall) RegisterUser(ctx context.Context, people MatchMakerUserEntities) error {
+	return dc.repo.CreateMatchMakerUsers(ctx, people)
+}
+
+func (dc *donutCall) UnRegisterUser(ctx context.Context, people MatchMakerUserEntities) error {
+	return dc.repo.DeleteMatchMakerUsers(ctx, people)
+}
+
+func (dc *donutCall) GetInformation(ctx context.Context, matchMakerSerial string) (*MatchMakerInformation, error) {
+	matchMaker, err := dc.repo.GetMatchMakerBySerial(ctx, matchMakerSerial)
+	if err != nil {
+		return nil, err
+	}
+
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerial(ctx, matchMakerSerial)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MatchMakerInformation{
+		MatchMaker: matchMaker,
+		Users:      matchMakerUsers,
+	}, nil
 }
