@@ -27,6 +27,17 @@ type Person struct {
 
 type People []*Person
 
+func (p People) ToUserReferences() []string {
+	var userReferences []string
+	for _, person := range p {
+		if person == nil {
+			continue
+		}
+		userReferences = append(userReferences, person.Name)
+	}
+	return userReferences
+}
+
 func (p People) Get(i int) *Person {
 	if i < 0 || i >= len(p) {
 		return nil
@@ -45,9 +56,20 @@ func (p People) Print() string {
 	return s
 }
 
-type PeopleMap map[string]bool
+type MatchMakerUserSerial string
 
-type MatchMap map[string]string
+func (m MatchMakerUserSerial) String() string {
+	return string(m)
+}
+
+type MatchMap map[MatchMakerUserSerial]People
+
+func (m MatchMap) First() (MatchMakerUserSerial, People) {
+	for serial, match := range m {
+		return serial, match
+	}
+	return "", nil
+}
 
 type MatchMakerEntity struct {
 	Serial      string
@@ -199,6 +221,22 @@ func (m MatchMakerUserEntities) ToPeople() People {
 		people = append(people, &Person{Name: matchMakerUser.UserReference})
 	}
 	return people
+}
+
+func (m MatchMakerUserEntities) ToMatchMap() MatchMap {
+	matchMap := make(MatchMap)
+	for _, matchMakerUser := range m {
+		if matchMakerUser == nil {
+			continue
+		}
+		match, ok := matchMap[MatchMakerUserSerial(matchMakerUser.Serial)]
+		if !ok {
+			matchMap[MatchMakerUserSerial(matchMakerUser.Serial)] = make(People, 0)
+		}
+		match = append(match, &Person{Name: matchMakerUser.UserReference})
+		matchMap[MatchMakerUserSerial(matchMakerUser.Serial)] = match
+	}
+	return matchMap
 }
 
 type MatchMakerInformation struct {

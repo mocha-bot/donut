@@ -69,6 +69,21 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to start match maker")
 	}
 
+	err = dc.Call(ctx, mmSerial, People{
+		{
+			Name: "aldi",
+		},
+		{
+			Name: "budi",
+		},
+		{
+			Name: "charlie",
+		},
+	})
+	if err != nil {
+		log.Print(err)
+	}
+
 	// dc.RegisterUsers(ctx, MatchMakerUserEntities{
 	// 	{
 	// 		MatchMakerSerial: mmSerial,

@@ -36,6 +36,27 @@ func NewDonutCall(donutRepository DonutRepository) DonutCall {
 }
 
 func (dc *donutCall) Call(ctx context.Context, matchMakerSerial string, people People) error {
+	users, err := dc.repo.GetUsersByMatchMakerSerialAndUserReferences(ctx, matchMakerSerial, people.ToUserReferences())
+	if err != nil {
+		return err
+	}
+
+	matchMap := users.ToMatchMap()
+
+	if len(matchMap) > 1 {
+		return fmt.Errorf("wrong pair")
+	}
+
+	matchMakerUserSerial, _ := matchMap.First()
+	usersRegistered, err := dc.repo.GetUsersBySerial(ctx, matchMakerUserSerial.String())
+	if err != nil {
+		return err
+	}
+
+	if len(usersRegistered) != len(people) {
+		return fmt.Errorf("pair is lack of people")
+	}
+
 	matchMakerUsersEntities := make(MatchMakerUserEntities, 0)
 
 	for _, person := range people {
@@ -46,16 +67,12 @@ func (dc *donutCall) Call(ctx context.Context, matchMakerSerial string, people P
 		matchMakerUser := &MatchMakerUserEntity{}
 		matchMakerUser.Build(
 			WithMatchMakerUserEntityMatchMakerSerial(matchMakerSerial),
-			WithMatchMakerUserEntitySerial(GenerateSerial()),
+			WithMatchMakerUserEntitySerial(matchMakerUserSerial.String()),
 			WithMatchMakerUserEntityUserReference(person.Name),
-			WithMatchMakerUserEntityStatus(MatchMakerUserStatusRunning),
+			WithMatchMakerUserEntityStatus(MatchMakerUserStatusFinished),
 		)
 
 		matchMakerUsersEntities = append(matchMakerUsersEntities, matchMakerUser)
-	}
-
-	if len(matchMakerUsersEntities)%2 == 1 {
-		return fmt.Errorf("people must be even")
 	}
 
 	return dc.repo.UpdateStatusMatchMakerUsers(ctx, matchMakerUsersEntities)
@@ -153,13 +170,15 @@ func (dc *donutCall) Pair(ctx context.Context, matchMakerSerial string) error {
 		switch {
 		case length == 3:
 			people, matchMakerUsersEntities = processThreeWayCall(people, matchMakerSerial, matchMakerUsersEntities)
+			length = 0
 		case length == 1:
 			people = processOneWayCall(people)
+			length = 0
 		default:
 			matchMakerUsersEntities = processTwoWayCall(length, people, matchMakerSerial, matchMakerUsersEntities)
+			length -= 2
 		}
 
-		length -= 2
 	}
 
 	return dc.repo.UpdateSerialMatchMakerUsers(ctx, matchMakerUsersEntities)

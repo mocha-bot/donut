@@ -23,6 +23,8 @@ type DonutRepository interface {
 	GetMatchMakerBySerial(ctx context.Context, serial string) (*MatchMakerEntity, error)
 	GetUsersByMatchMakerSerial(ctx context.Context, matchMakerSerial string) (MatchMakerUserEntities, error)
 	GetUsersByMatchMakerSerialAndStatus(ctx context.Context, matchMakerSerial string, status MatchMakerUserStatus) (MatchMakerUserEntities, error)
+	GetUsersByMatchMakerSerialAndUserReferences(ctx context.Context, matchMakerSerial string, userReferences []string) (MatchMakerUserEntities, error)
+	GetUsersBySerial(ctx context.Context, serial string) (MatchMakerUserEntities, error)
 }
 
 func NewDonutRepository(db *gorm.DB) DonutRepository {
@@ -61,9 +63,9 @@ func (r *donutRepository) UpdateStatusMatchMakerUsers(ctx context.Context, match
 		if matchMakerUser == nil {
 			continue
 		}
-		q := fmt.Sprintf("%s = ?", MatchMakerSerialColumn)
+		q := fmt.Sprintf("%s = ?", SerialColumn)
 		err := trx.Model(&MatchMakerUser{}).
-			Where(q, matchMakerUser.MatchMakerSerial).
+			Where(q, matchMakerUser.Serial).
 			Update(StatusColumn, matchMakerUser.Status).
 			Error
 		if err != nil {
@@ -140,4 +142,24 @@ func (r *donutRepository) UpdateSerialMatchMakerUsers(ctx context.Context, match
 	}
 
 	return nil
+}
+
+func (r *donutRepository) GetUsersByMatchMakerSerialAndUserReferences(ctx context.Context, matchMakerSerial string, userReferences []string) (MatchMakerUserEntities, error) {
+	var matchMakerUsers MatchMakerUsers
+	q := fmt.Sprintf("%s = ? AND %s IN ?", MatchMakerSerialColumn, UserReferenceColumn)
+	err := r.db.WithContext(ctx).Where(q, matchMakerSerial, userReferences).Find(&matchMakerUsers).Error
+	if err != nil {
+		return nil, err
+	}
+	return matchMakerUsers.ToEntities(), nil
+}
+
+func (r *donutRepository) GetUsersBySerial(ctx context.Context, serial string) (MatchMakerUserEntities, error) {
+	var matchMakerUsers MatchMakerUsers
+	q := fmt.Sprintf("%s = ?", SerialColumn)
+	err := r.db.WithContext(ctx).Where(q, serial).Find(&matchMakerUsers).Error
+	if err != nil {
+		return nil, err
+	}
+	return matchMakerUsers.ToEntities(), nil
 }
