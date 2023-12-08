@@ -59,10 +59,6 @@ func main() {
 			MatchMakerSerial: mmSerial,
 			UserReference:    "charlie",
 		},
-		{
-			MatchMakerSerial: mmSerial,
-			UserReference:    "david",
-		},
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to register users")
@@ -72,6 +68,13 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start match maker")
 	}
+
+	// dc.RegisterUsers(ctx, MatchMakerUserEntities{
+	// 	{
+	// 		MatchMakerSerial: mmSerial,
+	// 		UserReference:    "eve",
+	// 	},
+	// })
 
 	// <-time.After(10 * time.Second)
 

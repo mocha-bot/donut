@@ -32,7 +32,7 @@ func (MatchMaker) FromEntity(entity *MatchMakerEntity) *MatchMaker {
 		Serial:      entity.Serial,
 		Name:        entity.Name,
 		Description: entity.Description,
-		Status:      MatchMakerStatusPending,
+		Status:      entity.Status,
 		StartTime:   entity.StartTime,
 		EndTime:     entity.StartTime.Add(entity.Duration),
 	}

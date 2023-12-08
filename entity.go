@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"time"
-
-	"github.com/gofrs/uuid/v5"
 )
 
 type MatchMakerStatus string
@@ -55,12 +53,9 @@ type MatchMakerEntity struct {
 	Serial      string
 	Name        string
 	Description string
+	Status      MatchMakerStatus
 	StartTime   time.Time
 	Duration    time.Duration
-}
-
-func (m *MatchMakerEntity) GenerateSerial() {
-	m.Serial = uuid.Must(uuid.NewV7()).String()
 }
 
 type MatchMakerEntityOption func(*MatchMakerEntity)
@@ -90,7 +85,8 @@ func WithMatchMakerEntityDuration(duration time.Duration) MatchMakerEntityOption
 }
 
 func (m *MatchMakerEntity) Build(options ...MatchMakerEntityOption) *MatchMakerEntity {
-	m.GenerateSerial()
+	m.Serial = GenerateSerial()
+	m.Status = MatchMakerStatusPending
 
 	for _, opt := range options {
 		opt(m)

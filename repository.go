@@ -101,7 +101,7 @@ func (r *donutRepository) GetUsersByMatchMakerSerial(ctx context.Context, matchM
 func (r *donutRepository) GetUsersByMatchMakerSerialAndStatus(ctx context.Context, matchMakerSerial string, status MatchMakerUserStatus) (MatchMakerUserEntities, error) {
 	var matchMakerUsers MatchMakerUsers
 	q := fmt.Sprintf("%s = ? AND %s = ?", MatchMakerSerialColumn, StatusColumn)
-	err := r.db.WithContext(ctx).Where(q, matchMakerSerial, status).Find(&MatchMakerUsers{}).Error
+	err := r.db.WithContext(ctx).Where(q, matchMakerSerial, status).Find(&matchMakerUsers).Error
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (r *donutRepository) UpdateSerialMatchMakerUsers(ctx context.Context, match
 		}
 		q := fmt.Sprintf("%s = ? AND %s = ?", MatchMakerSerialColumn, UserReferenceColumn)
 		updates := map[string]interface{}{
-			SerialColumn: matchMakerUser.MatchMakerSerial,
+			SerialColumn: matchMakerUser.Serial,
 			StatusColumn: MatchMakerUserStatusRunning,
 		}
 

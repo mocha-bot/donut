@@ -1,7 +1,7 @@
 package main
 
-import "github.com/gofrs/uuid/v5"
+import "github.com/google/uuid"
 
 func GenerateSerial() string {
-	return uuid.Must(uuid.NewV4()).String()
+	return uuid.New().String()
 }
