@@ -46,7 +46,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create match maker")
 	}
 
-	err = dc.RegisterUsers(ctx, MatchMakerUserEntities{
+	err = dc.RegisterPeople(ctx, MatchMakerUserEntities{
 		{
 			MatchMakerSerial: mmSerial,
 			UserReference:    "aldi",

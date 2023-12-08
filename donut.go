@@ -25,8 +25,8 @@ type DonutCall interface {
 	GetFinishedPeople(ctx context.Context, matchMakerSerial string) (People, error)
 	GetPendingPeople(ctx context.Context, matchMakerSerial string) (People, error)
 
-	RegisterUsers(ctx context.Context, people MatchMakerUserEntities) error
-	UnRegisterUsers(ctx context.Context, people MatchMakerUserEntities) error
+	RegisterPeople(ctx context.Context, people MatchMakerUserEntities) error
+	UnRegisterPeople(ctx context.Context, people MatchMakerUserEntities) error
 }
 
 func NewDonutCall(donutRepository DonutRepository) DonutCall {
@@ -123,11 +123,11 @@ func (dc *donutCall) CreateMatchMaker(ctx context.Context, matchMaker *MatchMake
 	return matchMaker.Serial, nil
 }
 
-func (dc *donutCall) RegisterUsers(ctx context.Context, people MatchMakerUserEntities) error {
+func (dc *donutCall) RegisterPeople(ctx context.Context, people MatchMakerUserEntities) error {
 	return dc.repo.CreateMatchMakerUsers(ctx, people)
 }
 
-func (dc *donutCall) UnRegisterUsers(ctx context.Context, people MatchMakerUserEntities) error {
+func (dc *donutCall) UnRegisterPeople(ctx context.Context, people MatchMakerUserEntities) error {
 	return dc.repo.DeleteMatchMakerUsers(ctx, people)
 }
 
