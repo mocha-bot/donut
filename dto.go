@@ -4,7 +4,7 @@ import "time"
 
 const (
 	MatchMakerSerialColumn = "matchmaker_serial"
-	UsernameColumn         = "username"
+	UserReferenceColumn    = "user_reference"
 	SerialColumn           = "serial"
 	StatusColumn           = "status"
 )
@@ -53,12 +53,16 @@ func (m *MatchMaker) ToEntity() *MatchMakerEntity {
 }
 
 type MatchMakerUser struct {
-	ID               int64 `gorm:"primaryKey"`
-	MatchMakerSerial string
+	ID               int64  `gorm:"primaryKey"`
+	MatchMakerSerial string `gorm:"column:matchmaker_serial"`
 	Serial           string `gorm:"uniqueIndex"`
-	Username         string
+	UserReference    string
 	Status           MatchMakerUserStatus
 	DeletedAt        *time.Time
+}
+
+func (MatchMakerUser) TableName() string {
+	return "matchmaker_user"
 }
 
 func (m *MatchMakerUser) FromEntity(entity *MatchMakerUserEntity) *MatchMakerUser {
@@ -69,7 +73,7 @@ func (m *MatchMakerUser) FromEntity(entity *MatchMakerUserEntity) *MatchMakerUse
 	return &MatchMakerUser{
 		MatchMakerSerial: entity.MatchMakerSerial,
 		Serial:           entity.Serial,
-		Username:         entity.Username,
+		UserReference:    entity.UserReference,
 		Status:           MatchMakerUserStatusPending,
 	}
 }
@@ -82,7 +86,7 @@ func (m *MatchMakerUser) ToEntity() *MatchMakerUserEntity {
 	return &MatchMakerUserEntity{
 		MatchMakerSerial: m.MatchMakerSerial,
 		Serial:           m.Serial,
-		Username:         m.Username,
+		UserReference:    m.UserReference,
 		Status:           m.Status,
 	}
 }

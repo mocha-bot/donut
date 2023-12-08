@@ -19,6 +19,7 @@ type MatchMakerUserStatus string
 
 const (
 	MatchMakerUserStatusPending  MatchMakerUserStatus = "pending"
+	MatchMakerUserStatusRunning  MatchMakerUserStatus = "running"
 	MatchMakerUserStatusFinished MatchMakerUserStatus = "finished"
 )
 
@@ -88,7 +89,7 @@ func WithMatchMakerEntityDuration(duration time.Duration) MatchMakerEntityOption
 	}
 }
 
-func (m *MatchMakerEntity) Build(options ...MatchMakerEntityOption) {
+func (m *MatchMakerEntity) Build(options ...MatchMakerEntityOption) *MatchMakerEntity {
 	m.GenerateSerial()
 
 	for _, opt := range options {
@@ -106,13 +107,89 @@ func (m *MatchMakerEntity) Build(options ...MatchMakerEntityOption) {
 	if m.Name == "" {
 		m.Name = fmt.Sprintf("MatchMaker-%s", m.Serial)
 	}
+
+	return m
+}
+
+func (m *MatchMakerEntity) Error() error {
+	if m.Serial == "" {
+		return fmt.Errorf("serial is empty")
+	}
+
+	if m.Name == "" {
+		return fmt.Errorf("name is empty")
+	}
+
+	if m.StartTime.IsZero() {
+		return fmt.Errorf("start time is zero")
+	}
+
+	if m.Duration == 0 {
+		return fmt.Errorf("duration is zero")
+	}
+
+	return nil
 }
 
 type MatchMakerUserEntity struct {
 	MatchMakerSerial string
 	Serial           string
-	Username         string
+	UserReference    string
 	Status           MatchMakerUserStatus
+}
+
+type MatchMakerUserEntityOption func(*MatchMakerUserEntity)
+
+func WithMatchMakerUserEntityStatus(status MatchMakerUserStatus) MatchMakerUserEntityOption {
+	return func(m *MatchMakerUserEntity) {
+		m.Status = status
+	}
+}
+
+func WithMatchMakerUserEntityUserReference(userReference string) MatchMakerUserEntityOption {
+	return func(m *MatchMakerUserEntity) {
+		m.UserReference = userReference
+	}
+}
+
+func WithMatchMakerUserEntityMatchMakerSerial(matchMakerSerial string) MatchMakerUserEntityOption {
+	return func(m *MatchMakerUserEntity) {
+		m.MatchMakerSerial = matchMakerSerial
+	}
+}
+
+func WithMatchMakerUserEntitySerial(serial string) MatchMakerUserEntityOption {
+	return func(m *MatchMakerUserEntity) {
+		m.Serial = serial
+	}
+}
+
+func (m *MatchMakerUserEntity) Build(options ...MatchMakerUserEntityOption) *MatchMakerUserEntity {
+	for _, opt := range options {
+		opt(m)
+	}
+
+	if m.Status == "" {
+		m.Status = MatchMakerUserStatusPending
+	}
+
+	return m
+}
+
+func (m *MatchMakerUserEntity) Error() error {
+	if m.MatchMakerSerial == "" {
+		return fmt.Errorf("match maker serial is empty")
+	}
+
+	if m.UserReference == "" {
+		return fmt.Errorf("user reference is empty")
+	}
+
+	if m.Serial == "" {
+		return fmt.Errorf("serial is empty")
+	}
+
+	return nil
 }
 
 type MatchMakerUserEntities []*MatchMakerUserEntity
@@ -123,7 +200,7 @@ func (m MatchMakerUserEntities) ToPeople() People {
 		if matchMakerUser == nil {
 			continue
 		}
-		people = append(people, &Person{Name: matchMakerUser.Username})
+		people = append(people, &Person{Name: matchMakerUser.UserReference})
 	}
 	return people
 }

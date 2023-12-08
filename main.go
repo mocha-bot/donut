@@ -37,9 +37,43 @@ func main() {
 		WithMatchMakerEntityDuration(10*24*time.Hour),
 	)
 
-	dc.CreateMatchMaker(ctx, matchMaker)
+	if matchMaker.Error() != nil {
+		log.Fatal().Err(err).Msg("failed to build match maker")
+	}
 
-	<-time.After(10 * time.Second)
+	mmSerial, err := dc.CreateMatchMaker(ctx, matchMaker)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create match maker")
+	}
+
+	err = dc.RegisterUsers(ctx, MatchMakerUserEntities{
+		{
+			MatchMakerSerial: mmSerial,
+			UserReference:    "aldi",
+		},
+		{
+			MatchMakerSerial: mmSerial,
+			UserReference:    "budi",
+		},
+		{
+			MatchMakerSerial: mmSerial,
+			UserReference:    "charlie",
+		},
+		{
+			MatchMakerSerial: mmSerial,
+			UserReference:    "david",
+		},
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to register users")
+	}
+
+	err = dc.Start(ctx, mmSerial)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start match maker")
+	}
+
+	// <-time.After(10 * time.Second)
 
 	// for _, name := range names {
 	// 	dc.Register(name)

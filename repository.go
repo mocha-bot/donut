@@ -16,6 +16,7 @@ type DonutRepository interface {
 	CreateMatchMaker(ctx context.Context, matchMaker *MatchMakerEntity) error
 	CreateMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
 
+	UpdateSerialMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
 	UpdateStatusMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
 	DeleteMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
 
@@ -39,6 +40,7 @@ func (r *donutRepository) CreateMatchMakerUsers(ctx context.Context, matchMakerU
 	return r.db.
 		WithContext(ctx).
 		Clauses(clauses).
+		Model(&MatchMakerUser{}).
 		Create(MatchMakerUsers{}.FromEntities(matchMakerUsers)).
 		Error
 }
@@ -89,7 +91,7 @@ func (r *donutRepository) GetMatchMakerBySerial(ctx context.Context, serial stri
 func (r *donutRepository) GetUsersByMatchMakerSerial(ctx context.Context, matchMakerSerial string) (MatchMakerUserEntities, error) {
 	var matchMakerUsers MatchMakerUsers
 	q := fmt.Sprintf("%s = ?", MatchMakerSerialColumn)
-	err := r.db.WithContext(ctx).Where(q, matchMakerSerial).Find(&MatchMakerUsers{}).Error
+	err := r.db.WithContext(ctx).Where(q, matchMakerSerial).Find(&matchMakerUsers).Error
 	if err != nil {
 		return nil, err
 	}
@@ -104,4 +106,38 @@ func (r *donutRepository) GetUsersByMatchMakerSerialAndStatus(ctx context.Contex
 		return nil, err
 	}
 	return matchMakerUsers.ToEntities(), nil
+}
+
+func (r *donutRepository) UpdateSerialMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) (err error) {
+	trx := r.db.WithContext(ctx).Begin()
+
+	defer func() {
+		if err != nil {
+			trx.Rollback()
+			return
+		}
+
+		trx.Commit()
+	}()
+
+	for _, matchMakerUser := range matchMakerUsers {
+		if matchMakerUser == nil {
+			continue
+		}
+		q := fmt.Sprintf("%s = ? AND %s = ?", MatchMakerSerialColumn, UserReferenceColumn)
+		updates := map[string]interface{}{
+			SerialColumn: matchMakerUser.MatchMakerSerial,
+			StatusColumn: MatchMakerUserStatusRunning,
+		}
+
+		err := trx.Model(&MatchMakerUser{}).
+			Where(q, matchMakerUser.MatchMakerSerial, matchMakerUser.UserReference).
+			Updates(updates).
+			Error
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
