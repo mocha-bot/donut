@@ -56,7 +56,9 @@ func (r *donutRepository) UpdateStatusMatchMakerUsers(ctx context.Context, match
 			return
 		}
 
-		trx.Commit()
+		if err := trx.Commit(); err != nil {
+			return err
+		}
 	}()
 
 	for _, matchMakerUser := range matchMakerUsers {
@@ -74,6 +76,7 @@ func (r *donutRepository) UpdateStatusMatchMakerUsers(ctx context.Context, match
 	}
 
 	return nil
+}
 }
 
 func (r *donutRepository) DeleteMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error {
