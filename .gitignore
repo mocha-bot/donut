@@ -1,0 +1,4 @@
+postgres-data/
+
+# Ignore .env files as they are usually used to configure the app
+*.env
