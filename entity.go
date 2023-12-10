@@ -242,4 +242,5 @@ func (m MatchMakerUserEntities) ToMatchMap() MatchMap {
 type MatchMakerInformation struct {
 	MatchMaker *MatchMakerEntity
 	Users      MatchMakerUserEntities
+	Pairs      MatchMap
 }

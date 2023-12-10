@@ -83,7 +83,7 @@ func (r *donutRepository) DeleteMatchMakerUsers(ctx context.Context, matchMakerU
 func (r *donutRepository) GetMatchMakerBySerial(ctx context.Context, serial string) (*MatchMakerEntity, error) {
 	var matchMaker MatchMaker
 	q := fmt.Sprintf("%s = ?", SerialColumn)
-	err := r.db.WithContext(ctx).Where(q, serial).First(&MatchMaker{}).Error
+	err := r.db.WithContext(ctx).Where(q, serial).First(&matchMaker).Error
 	if err != nil {
 		return nil, err
 	}

@@ -24,6 +24,7 @@ type DonutCall interface {
 	GetPeople(ctx context.Context, matchMakerSerial string) (People, error)
 	GetFinishedPeople(ctx context.Context, matchMakerSerial string) (People, error)
 	GetPendingPeople(ctx context.Context, matchMakerSerial string) (People, error)
+	GetPeoplePair(ctx context.Context, matchMakerSerial string) (MatchMap, error)
 
 	RegisterPeople(ctx context.Context, people MatchMakerUserEntities) error
 	UnRegisterPeople(ctx context.Context, people MatchMakerUserEntities) error
@@ -36,6 +37,15 @@ func NewDonutCall(donutRepository DonutRepository) DonutCall {
 }
 
 func (dc *donutCall) Call(ctx context.Context, matchMakerSerial string, people People) error {
+	matchMaker, err := dc.repo.GetMatchMakerBySerial(ctx, matchMakerSerial)
+	if err != nil {
+		return err
+	}
+
+	if matchMaker.Status != MatchMakerStatusRunning {
+		return fmt.Errorf("match maker is not running")
+	}
+
 	users, err := dc.repo.GetUsersByMatchMakerSerialAndUserReferences(ctx, matchMakerSerial, people.ToUserReferences())
 	if err != nil {
 		return err
@@ -184,6 +194,15 @@ func (dc *donutCall) Pair(ctx context.Context, matchMakerSerial string) error {
 	return dc.repo.UpdateSerialMatchMakerUsers(ctx, matchMakerUsersEntities)
 }
 
+func (dc *donutCall) GetPeoplePair(ctx context.Context, matchMakerSerial string) (MatchMap, error) {
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerial(ctx, matchMakerSerial)
+	if err != nil {
+		return nil, err
+	}
+
+	return matchMakerUsers.ToMatchMap(), nil
+}
+
 func processOneWayCall(people People) People {
 	fmt.Printf("There is one person left: %s\n", people[0].Name)
 	people = people[:0]
@@ -217,8 +236,10 @@ func processTwoWayCall(length int, people People, matchMakerSerial string, match
 		return matchMakerUsersEntities
 	}
 
-	p1Idx := rand.Intn(length - 1)
-	p2Idx := rand.Intn(length - 1)
+	n := length - 1
+
+	p1Idx := rand.Intn(n)
+	p2Idx := rand.Intn(n)
 
 	for p1Idx == p2Idx {
 		p2Idx = rand.Intn(length)
@@ -235,21 +256,21 @@ func processTwoWayCall(length int, people People, matchMakerSerial string, match
 
 	matchmakingSerial := GenerateSerial()
 
-	p1 := &MatchMakerUserEntity{}
-	p1.Build(
-		WithMatchMakerUserEntityMatchMakerSerial(matchMakerSerial),
-		WithMatchMakerUserEntitySerial(matchmakingSerial),
-		WithMatchMakerUserEntityUserReference(person1.Name),
-		WithMatchMakerUserEntityStatus(MatchMakerUserStatusRunning),
-	)
+	for _, person := range []*Person{person1, person2} {
+		if person == nil {
+			continue
+		}
 
-	p2 := &MatchMakerUserEntity{}
-	p2.Build(
-		WithMatchMakerUserEntityMatchMakerSerial(matchMakerSerial),
-		WithMatchMakerUserEntitySerial(matchmakingSerial),
-		WithMatchMakerUserEntityUserReference(person2.Name),
-		WithMatchMakerUserEntityStatus(MatchMakerUserStatusRunning),
-	)
+		matchMakerUser := &MatchMakerUserEntity{}
+		matchMakerUser.Build(
+			WithMatchMakerUserEntityMatchMakerSerial(matchMakerSerial),
+			WithMatchMakerUserEntitySerial(matchmakingSerial),
+			WithMatchMakerUserEntityUserReference(person.Name),
+			WithMatchMakerUserEntityStatus(MatchMakerUserStatusRunning),
+		)
 
-	return append(matchMakerUsersEntities, p1, p2)
+		matchMakerUsersEntities = append(matchMakerUsersEntities, matchMakerUser)
+	}
+
+	return matchMakerUsersEntities
 }

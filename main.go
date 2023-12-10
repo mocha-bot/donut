@@ -2,10 +2,16 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"buf.build/gen/go/mocha/remcall/connectrpc/go/donut/v1/donutv1connect"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 func main() {
@@ -19,120 +25,46 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to get database instance")
 	}
 
-	fmt.Println(db)
+	mux := http.NewServeMux()
 
-	ctx := context.Background()
+	// Create instances
+	repo := NewDonutRepository(db)
+	donut := NewDonutCall(repo)
+	handler := NewHandler(donut)
 
-	// create a slice of names
-	// names := []string{"Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Harry"}
+	mmPath, mmHandler := donutv1connect.NewMatchMakerServiceHandler(handler)
+	pPath, pHandler := donutv1connect.NewPeopleServiceHandler(handler)
 
-	dcRepo := NewDonutRepository(db)
-	dc := NewDonutCall(dcRepo)
+	mux.Handle(mmPath, mmHandler)
+	mux.Handle(pPath, pHandler)
 
-	matchMaker := &MatchMakerEntity{}
-	matchMaker.Build(
-		WithMatchMakerEntityName("test"),
-		WithMatchMakerEntityDescription("test description"),
-		WithMatchMakerEntityStartTime(time.Now()),
-		WithMatchMakerEntityDuration(10*24*time.Hour),
-	)
-
-	if matchMaker.Error() != nil {
-		log.Fatal().Err(err).Msg("failed to build match maker")
+	server := &http.Server{
+		Addr:    cfg.ApplicationConfig.Address(),
+		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
-	mmSerial, err := dc.CreateMatchMaker(ctx, matchMaker)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create match maker")
+	// Run the server in a goroutine so that it doesn't block
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("failed to serve")
+		}
+
+		log.Info().Msgf("server is listening on %s", cfg.ApplicationConfig.Address())
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Info().Msg("server is shutting down")
+
+	// Create a context with a timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Shutdown the server gracefully
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal().Err(err).Msg("failed to shutdown server gracefully")
 	}
-
-	err = dc.RegisterPeople(ctx, MatchMakerUserEntities{
-		{
-			MatchMakerSerial: mmSerial,
-			UserReference:    "aldi",
-		},
-		{
-			MatchMakerSerial: mmSerial,
-			UserReference:    "budi",
-		},
-		{
-			MatchMakerSerial: mmSerial,
-			UserReference:    "charlie",
-		},
-	})
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to register users")
-	}
-
-	err = dc.Start(ctx, mmSerial)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to start match maker")
-	}
-
-	err = dc.Call(ctx, mmSerial, People{
-		{
-			Name: "aldi",
-		},
-		{
-			Name: "budi",
-		},
-		{
-			Name: "charlie",
-		},
-	})
-	if err != nil {
-		log.Print(err)
-	}
-
-	// dc.RegisterUsers(ctx, MatchMakerUserEntities{
-	// 	{
-	// 		MatchMakerSerial: mmSerial,
-	// 		UserReference:    "eve",
-	// 	},
-	// })
-
-	// <-time.After(10 * time.Second)
-
-	// for _, name := range names {
-	// 	dc.Register(name)
-	// }
-
-	// fmt.Println()
-	// fmt.Println("Start...")
-
-	// dc.Start()
-
-	// fmt.Println()
-	// fmt.Println("Do calls...")
-
-	// dc.DoCall(dc.GetPerson("Alice"), dc.GetPerson("Bob"))
-	// dc.DoCall(dc.GetPerson("Charlie"), dc.GetPerson("David"))
-	// dc.DoCall(dc.GetPerson("Eve"), dc.GetPerson("Frank"))
-
-	// fmt.Println()
-	// fmt.Println("Add person...")
-
-	// dc.AddPerson("Ivan")
-	// dc.AddPerson("Goldi")
-	// dc.AddPerson("Samde")
-
-	// fmt.Println()
-	// fmt.Println("RePair...")
-
-	// dc.RePair()
-
-	// fmt.Println()
-	// fmt.Println("Remove person...")
-
-	// dc.RemovePerson("Ivan")
-
-	// fmt.Println()
-	// fmt.Println("RePair...")
-
-	// dc.RePair()
-
-	// fmt.Println()
-	// fmt.Println("Print...")
-
-	// dc.Print()
 }

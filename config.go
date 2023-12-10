@@ -5,7 +5,8 @@ import (
 )
 
 type Config struct {
-	DatabaseConfig DatabaseConfig
+	ApplicationConfig ApplicationConfig
+	DatabaseConfig    DatabaseConfig
 }
 
 func Get() (*Config, error) {

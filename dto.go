@@ -10,7 +10,6 @@ const (
 )
 
 type MatchMaker struct {
-	ID          int64  `gorm:"primaryKey"`
 	Serial      string `gorm:"uniqueIndex"`
 	Name        string
 	Description string
@@ -53,7 +52,6 @@ func (m *MatchMaker) ToEntity() *MatchMakerEntity {
 }
 
 type MatchMakerUser struct {
-	ID               int64  `gorm:"primaryKey"`
 	MatchMakerSerial string `gorm:"column:matchmaker_serial"`
 	Serial           string `gorm:"uniqueIndex"`
 	UserReference    string
