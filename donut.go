@@ -54,7 +54,7 @@ func (dc *donutCall) Call(ctx context.Context, matchMakerSerial string, people P
 	matchMap := users.ToMatchMap()
 
 	if len(matchMap) > 1 {
-		return fmt.Errorf("wrong pair")
+		return fmt.Errorf("expected one pair but found %d", len(matchMap))
 	}
 
 	matchMakerUserSerial, _ := matchMap.First()
@@ -86,6 +86,7 @@ func (dc *donutCall) Call(ctx context.Context, matchMakerSerial string, people P
 	}
 
 	return dc.repo.UpdateStatusMatchMakerUsers(ctx, matchMakerUsersEntities)
+}
 }
 
 func (dc *donutCall) Start(ctx context.Context, matchMakerSerial string) error {
