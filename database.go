@@ -6,6 +6,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type DatabaseDialect string
@@ -22,10 +23,11 @@ type DatabaseConfig struct {
 	Password string `env:"DATABASE_PASSWORD"`
 	Schema   string `env:"DATABASE_SCHEMA"`
 	Debug    bool   `env:"DATABASE_DEBUG" envDefault:"false"`
+	LogLevel string `env:"DATABASE_LOG_LEVEL" envDefault:"info" enum:"silent,error,warn,info"`
 	Dialect  string `env:"DATABASE_DIALECT"`
 }
 
-func (d DatabaseConfig) GetDialector() gorm.Dialector {
+func (d DatabaseConfig) GetDialector() (gorm.Dialector, error) {
 	switch d.Dialect {
 	case string(DialectMySQL):
 		dsn := fmt.Sprintf(
@@ -36,7 +38,7 @@ func (d DatabaseConfig) GetDialector() gorm.Dialector {
 			d.Port,
 			d.Schema,
 		)
-		return mysql.Open(dsn)
+		return mysql.Open(dsn), nil
 	case string(DialectPostgres):
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Jakarta",
 			d.Host,
@@ -45,8 +47,21 @@ func (d DatabaseConfig) GetDialector() gorm.Dialector {
 			d.Schema,
 			d.Port,
 		)
-		return postgres.Open(dsn)
+		return postgres.Open(dsn), nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unsupported database dialect: %s", d.Dialect)
+	}
+}
+
+func (d DatabaseConfig) GetLogLevel() logger.LogLevel {
+	switch d.LogLevel {
+	case "error":
+		return logger.Error
+	case "warn":
+		return logger.Warn
+	case "info":
+		return logger.Info
+	default:
+		return logger.Silent
 	}
 }

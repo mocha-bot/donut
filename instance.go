@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -13,20 +12,20 @@ import (
 func NewDatabaseInstance(conf *Config) (*gorm.DB, error) {
 	gormConf := new(gorm.Config)
 
-	if conf.DatabaseConfig.Debug {
+	if conf.DatabaseConfig.LogLevel != "" {
 		gormConf.Logger = logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			logger.Config{
 				SlowThreshold: time.Second,
-				LogLevel:      logger.Silent,
+				LogLevel:      conf.DatabaseConfig.GetLogLevel(),
 				Colorful:      true,
 			},
 		)
 	}
 
-	dialector := conf.DatabaseConfig.GetDialector()
-	if dialector == nil {
-		return nil, fmt.Errorf("unsupported database dialect, %s", conf.DatabaseConfig.Dialect)
+	dialector, err := conf.DatabaseConfig.GetDialector()
+	if err != nil {
+		return nil, err
 	}
 
 	instance, err := gorm.Open(dialector, gormConf)

@@ -9,6 +9,10 @@ import (
 )
 
 func parseCreateMatchMakerRequest(req *connect.Request[donutv1.CreateMatchMakerRequest]) (parsed *MatchMakerEntity) {
+	if req.Msg.MatchMaker == nil {
+		return nil
+	}
+
 	return parsed.Build(
 		WithMatchMakerEntityName(req.Msg.MatchMaker.GetName()),
 		WithMatchMakerEntityDescription(req.Msg.MatchMaker.GetDescription()),
@@ -41,10 +45,12 @@ func parseGetMatchMakerInformationResponse(info *MatchMakerInformation) *connect
 
 func parseRegisterPeopleRequest(req *donutv1.RegisterPeopleRequest) (parsed MatchMakerUserEntities) {
 	entity := &MatchMakerUserEntity{}
-	return append(parsed, entity.Build(
+	entity.Build(
 		WithMatchMakerUserEntityMatchMakerSerial(req.GetMatchmakerSerial()),
 		WithMatchMakerUserEntityUserReference(req.GetReference()),
-	))
+		WithMatchMakerUserEntityStatus(MatchMakerUserStatusPending),
+	)
+	return append(parsed, entity)
 }
 
 func parseUnRegisterPeopleRequest(req *donutv1.UnRegisterPeopleRequest) (parsed MatchMakerUserEntities) {

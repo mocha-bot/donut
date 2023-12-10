@@ -87,7 +87,6 @@ func (dc *donutCall) Call(ctx context.Context, matchMakerSerial string, people P
 
 	return dc.repo.UpdateStatusMatchMakerUsers(ctx, matchMakerUsersEntities)
 }
-}
 
 func (dc *donutCall) Start(ctx context.Context, matchMakerSerial string) error {
 	matchMaker, err := dc.repo.GetMatchMakerBySerial(ctx, matchMakerSerial)
@@ -173,11 +172,7 @@ func (dc *donutCall) Pair(ctx context.Context, matchMakerSerial string) error {
 
 	matchMakerUsersEntities := make(MatchMakerUserEntities, 0)
 
-	for length >= 0 {
-		if length <= 0 {
-			break
-		}
-
+	for length > 0 {
 		switch {
 		case length == 3:
 			people, matchMakerUsersEntities = processThreeWayCall(people, matchMakerSerial, matchMakerUsersEntities)
@@ -189,7 +184,6 @@ func (dc *donutCall) Pair(ctx context.Context, matchMakerSerial string) error {
 			matchMakerUsersEntities = processTwoWayCall(length, people, matchMakerSerial, matchMakerUsersEntities)
 			length -= 2
 		}
-
 	}
 
 	return dc.repo.UpdateSerialMatchMakerUsers(ctx, matchMakerUsersEntities)

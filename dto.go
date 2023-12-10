@@ -72,7 +72,7 @@ func (m *MatchMakerUser) FromEntity(entity *MatchMakerUserEntity) *MatchMakerUse
 		MatchMakerSerial: entity.MatchMakerSerial,
 		Serial:           entity.Serial,
 		UserReference:    entity.UserReference,
-		Status:           MatchMakerUserStatusPending,
+		Status:           entity.Status,
 	}
 }
 

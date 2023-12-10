@@ -60,7 +60,7 @@ func main() {
 	log.Info().Msg("server is shutting down")
 
 	// Create a context with a timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ApplicationConfig.GracefulShutdownTimeout))
 	defer cancel()
 
 	// Shutdown the server gracefully
