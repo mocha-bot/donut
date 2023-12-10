@@ -148,13 +148,24 @@ func (r *donutRepository) UpdateSerialMatchMakerUsers(ctx context.Context, match
 }
 
 func (r *donutRepository) GetUsersByMatchMakerSerialAndUserReferences(ctx context.Context, matchMakerSerial string, userReferences []string) (MatchMakerUserEntities, error) {
-	var matchMakerUsers MatchMakerUsers
-	q := fmt.Sprintf("%s = ? AND %s IN ?", MatchMakerSerialColumn, UserReferenceColumn)
-	err := r.db.WithContext(ctx).Where(q, matchMakerSerial, userReferences).Find(&matchMakerUsers).Error
-	if err != nil {
-		return nil, err
+	const batchSize = 1000
+	var allMatchMakerUsers MatchMakerUserEntities
+
+	for i := 0; i < len(userReferences); i += batchSize {
+		end := i + batchSize
+		if end > len(userReferences) {
+			end = len(userReferences)
+		}
+		var batchMatchMakerUsers MatchMakerUsers
+		q := fmt.Sprintf("%s = ? AND %s IN ?", MatchMakerSerialColumn, UserReferenceColumn)
+		err := r.db.WithContext(ctx).Where(q, matchMakerSerial, userReferences[i:end]).Find(&batchMatchMakerUsers).Error
+		if err != nil {
+			return nil, err
+		}
+		allMatchMakerUsers = append(allMatchMakerUsers, batchMatchMakerUsers.ToEntities()...)
 	}
-	return matchMakerUsers.ToEntities(), nil
+
+	return allMatchMakerUsers, nil
 }
 
 func (r *donutRepository) GetUsersBySerial(ctx context.Context, serial string) (MatchMakerUserEntities, error) {
