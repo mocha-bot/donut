@@ -1,5 +1,7 @@
 FROM golang:1.21.0-alpine3.18 as builder
 
+LABEL org.opencontainers.image.source https://github.com/mocha-bot/donut
+
 RUN apk update && apk upgrade && \
   apk --no-cache --update add git make
 
