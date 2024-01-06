@@ -16,6 +16,8 @@ type MatchMaker struct {
 	Status      MatchMakerStatus
 	StartTime   time.Time
 	EndTime     time.Time
+	CreatedAt   time.Time `gorm:"autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
 }
 
 func (MatchMaker) TableName() string {
@@ -57,6 +59,8 @@ type MatchMakerUser struct {
 	UserReference    string
 	Status           MatchMakerUserStatus
 	DeletedAt        *time.Time
+	CreatedAt        time.Time `gorm:"autoCreateTime"`
+	UpdatedAt        time.Time `gorm:"autoUpdateTime"`
 }
 
 func (MatchMakerUser) TableName() string {

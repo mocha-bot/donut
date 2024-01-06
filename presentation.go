@@ -8,12 +8,14 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func parseCreateMatchMakerRequest(req *connect.Request[donutv1.CreateMatchMakerRequest]) (parsed *MatchMakerEntity) {
+func parseCreateMatchMakerRequest(req *connect.Request[donutv1.CreateMatchMakerRequest]) *MatchMakerEntity {
 	if req.Msg.MatchMaker == nil {
 		return nil
 	}
 
-	return parsed.Build(
+	matchMakerEntity := &MatchMakerEntity{}
+
+	return matchMakerEntity.Build(
 		WithMatchMakerEntityName(req.Msg.MatchMaker.GetName()),
 		WithMatchMakerEntityDescription(req.Msg.MatchMaker.GetDescription()),
 		WithMatchMakerEntityStartTime(req.Msg.MatchMaker.GetStartTime().AsTime()),

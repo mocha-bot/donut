@@ -183,6 +183,8 @@ func WithMatchMakerUserEntitySerial(serial string) MatchMakerUserEntityOption {
 }
 
 func (m *MatchMakerUserEntity) Build(options ...MatchMakerUserEntityOption) *MatchMakerUserEntity {
+	m.Serial = GenerateSerial()
+
 	for _, opt := range options {
 		opt(m)
 	}

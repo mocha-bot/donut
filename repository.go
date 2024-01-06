@@ -80,7 +80,19 @@ func (r *donutRepository) UpdateStatusMatchMakerUsers(ctx context.Context, match
 }
 
 func (r *donutRepository) DeleteMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error {
-	return r.db.WithContext(ctx).Delete(MatchMakerUsers{}.FromEntities(matchMakerUsers)).Error
+	q := fmt.Sprintf("%s = ? AND %s = ?", MatchMakerSerialColumn, UserReferenceColumn)
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, matchMakerUser := range matchMakerUsers {
+			err := tx.WithContext(ctx).
+				Where(q, matchMakerUser.MatchMakerSerial, matchMakerUser.UserReference).
+				Delete(MatchMakerUsers{}).
+				Error
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *donutRepository) GetMatchMakerBySerial(ctx context.Context, serial string) (*MatchMakerEntity, error) {
