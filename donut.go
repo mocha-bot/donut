@@ -4,6 +4,11 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+
+	trmgorm "github.com/avito-tech/go-transaction-manager/drivers/gorm/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/settings"
 )
 
 type donutCall struct {
@@ -98,15 +103,56 @@ func (dc *donutCall) Start(ctx context.Context, matchMakerSerial string) error {
 		return fmt.Errorf("match maker is already running")
 	}
 
-	if matchMaker.Status == MatchMakerStatusFinished {
-		return fmt.Errorf("match maker is already finished")
+	if matchMaker.Status == MatchMakerStatusFinished || matchMaker.Status == MatchMakerStatusStopped {
+		return fmt.Errorf("match maker is already finished or stopped")
 	}
 
 	return dc.Pair(ctx, matchMakerSerial)
 }
 
 func (dc *donutCall) Stop(ctx context.Context, matchMakerSerial string) error {
-	return nil
+	matchMaker, err := dc.repo.GetMatchMakerBySerial(ctx, matchMakerSerial)
+	if err != nil {
+		return err
+	}
+
+	if matchMaker.Status == MatchMakerStatusFinished {
+		return nil
+	}
+
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatuses(ctx, matchMakerSerial, []MatchMakerUserStatus{MatchMakerUserStatusPending, MatchMakerUserStatusRunning})
+	if err != nil {
+		return err
+	}
+
+	trManagerSettingOptions, err := settings.New(settings.WithPropagation(trm.PropagationRequired))
+	if err != nil {
+		return err
+	}
+
+	trManagerSetting, err := trmgorm.NewSettings(trManagerSettingOptions)
+	if err != nil {
+		return err
+	}
+
+	trManager, err := manager.New(trmgorm.NewDefaultFactory(dc.repo.Database()), manager.WithSettings(trManagerSetting))
+	if err != nil {
+		return err
+	}
+
+	return trManager.Do(ctx, func(ctx context.Context) error {
+		for _, matchMakerUser := range matchMakerUsers {
+			if matchMakerUser == nil {
+				continue
+			}
+			matchMakerUser.Status = MatchMakerUserStatusStopped
+			err := dc.repo.UpdateStatusMatchMakerUser(ctx, matchMakerUser)
+			if err != nil {
+				return err
+			}
+		}
+		return dc.repo.UpdateMatchMakerStatusBySerial(ctx, matchMakerSerial, MatchMakerStatusFinished)
+	})
 }
 
 func (dc *donutCall) GetPeople(ctx context.Context, matchMakerSerial string) (People, error) {
@@ -115,12 +161,12 @@ func (dc *donutCall) GetPeople(ctx context.Context, matchMakerSerial string) (Pe
 }
 
 func (dc *donutCall) GetFinishedPeople(ctx context.Context, matchMakerSerial string) (People, error) {
-	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatus(ctx, matchMakerSerial, MatchMakerUserStatusFinished)
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatuses(ctx, matchMakerSerial, []MatchMakerUserStatus{MatchMakerUserStatusFinished})
 	return matchMakerUsers.ToPeople(), err
 }
 
 func (dc *donutCall) GetPendingPeople(ctx context.Context, matchMakerSerial string) (People, error) {
-	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatus(ctx, matchMakerSerial, MatchMakerUserStatusPending)
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatuses(ctx, matchMakerSerial, []MatchMakerUserStatus{MatchMakerUserStatusPending})
 	return matchMakerUsers.ToPeople(), err
 }
 
@@ -159,7 +205,7 @@ func (dc *donutCall) GetInformation(ctx context.Context, matchMakerSerial string
 }
 
 func (dc *donutCall) Pair(ctx context.Context, matchMakerSerial string) error {
-	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatus(ctx, matchMakerSerial, MatchMakerUserStatusPending)
+	matchMakerUsers, err := dc.repo.GetUsersByMatchMakerSerialAndStatuses(ctx, matchMakerSerial, []MatchMakerUserStatus{MatchMakerUserStatusPending})
 	if err != nil {
 		return err
 	}
@@ -186,7 +232,33 @@ func (dc *donutCall) Pair(ctx context.Context, matchMakerSerial string) error {
 		}
 	}
 
-	return dc.repo.UpdateSerialMatchMakerUsers(ctx, matchMakerUsersEntities)
+	trManagerSettingOptions, err := settings.New(settings.WithPropagation(trm.PropagationRequired))
+	if err != nil {
+		return err
+	}
+
+	trManagerSetting, err := trmgorm.NewSettings(trManagerSettingOptions)
+	if err != nil {
+		return err
+	}
+
+	trManager, err := manager.New(trmgorm.NewDefaultFactory(dc.repo.Database()), manager.WithSettings(trManagerSetting))
+	if err != nil {
+		return err
+	}
+
+	return trManager.Do(ctx, func(ctx context.Context) error {
+		for _, matchMakerUser := range matchMakerUsersEntities {
+			if matchMakerUser == nil {
+				continue
+			}
+			err := dc.repo.UpdateSerialMatchMakerUser(ctx, matchMakerUser)
+			if err != nil {
+				return err
+			}
+		}
+		return dc.repo.UpdateMatchMakerStatusBySerial(ctx, matchMakerSerial, MatchMakerStatusRunning)
+	})
 }
 
 func (dc *donutCall) GetPeoplePair(ctx context.Context, matchMakerSerial string) (MatchMap, error) {

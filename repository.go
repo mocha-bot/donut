@@ -15,22 +15,31 @@ type donutRepository struct {
 type DonutRepository interface {
 	CreateMatchMaker(ctx context.Context, matchMaker *MatchMakerEntity) error
 	CreateMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
+	UpdateMatchMakerStatusBySerial(ctx context.Context, serial string, status MatchMakerStatus) error
 
 	UpdateSerialMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
+	UpdateSerialMatchMakerUser(ctx context.Context, matchMakerUser *MatchMakerUserEntity) error
 	UpdateStatusMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
+	UpdateStatusMatchMakerUser(ctx context.Context, matchMakerUser *MatchMakerUserEntity) error
 	DeleteMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) error
 
 	GetMatchMakerBySerial(ctx context.Context, serial string) (*MatchMakerEntity, error)
 	GetUsersByMatchMakerSerial(ctx context.Context, matchMakerSerial string) (MatchMakerUserEntities, error)
-	GetUsersByMatchMakerSerialAndStatus(ctx context.Context, matchMakerSerial string, status MatchMakerUserStatus) (MatchMakerUserEntities, error)
+	GetUsersByMatchMakerSerialAndStatuses(ctx context.Context, matchMakerSerial string, status []MatchMakerUserStatus) (MatchMakerUserEntities, error)
 	GetUsersByMatchMakerSerialAndUserReferences(ctx context.Context, matchMakerSerial string, userReferences []string) (MatchMakerUserEntities, error)
 	GetUsersBySerial(ctx context.Context, serial string) (MatchMakerUserEntities, error)
+
+	Database() *gorm.DB
 }
 
 func NewDonutRepository(db *gorm.DB) DonutRepository {
 	return &donutRepository{
 		db: db,
 	}
+}
+
+func (r *donutRepository) Database() *gorm.DB {
+	return r.db
 }
 
 func (r *donutRepository) CreateMatchMaker(ctx context.Context, matchMaker *MatchMakerEntity) error {
@@ -47,19 +56,20 @@ func (r *donutRepository) CreateMatchMakerUsers(ctx context.Context, matchMakerU
 		Error
 }
 
+// UpdateStatusMatchMakerUsers updates only for status of match maker users.
+// This implementation is to handle for multiple update queries and transaction by gorm.
+// The manager pattern is not necessary for this implementation.
 func (r *donutRepository) UpdateStatusMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) (err error) {
 	trx := r.db.WithContext(ctx).Begin()
 
 	defer func() {
 		if err != nil {
-			trx.Rollback()
+			err = trx.Rollback().Error
 			return
 		}
 
-		err := trx.Commit()
-		if err != nil {
-			return
-		}
+		err = trx.Commit().Error
+		return
 	}()
 
 	for _, matchMakerUser := range matchMakerUsers {
@@ -115,9 +125,9 @@ func (r *donutRepository) GetUsersByMatchMakerSerial(ctx context.Context, matchM
 	return matchMakerUsers.ToEntities(), nil
 }
 
-func (r *donutRepository) GetUsersByMatchMakerSerialAndStatus(ctx context.Context, matchMakerSerial string, status MatchMakerUserStatus) (MatchMakerUserEntities, error) {
+func (r *donutRepository) GetUsersByMatchMakerSerialAndStatuses(ctx context.Context, matchMakerSerial string, status []MatchMakerUserStatus) (MatchMakerUserEntities, error) {
 	var matchMakerUsers MatchMakerUsers
-	q := fmt.Sprintf("%s = ? AND %s = ?", MatchMakerSerialColumn, StatusColumn)
+	q := fmt.Sprintf("%s = ? AND %s IN (?)", MatchMakerSerialColumn, StatusColumn)
 	err := r.db.WithContext(ctx).Where(q, matchMakerSerial, status).Find(&matchMakerUsers).Error
 	if err != nil {
 		return nil, err
@@ -125,16 +135,20 @@ func (r *donutRepository) GetUsersByMatchMakerSerialAndStatus(ctx context.Contex
 	return matchMakerUsers.ToEntities(), nil
 }
 
+// UpdateSerialMatchMakerUsers updates only for serial and status of match maker users.
+// This implementation is to handle for multiple update queries and transaction by gorm.
+// The manager pattern is not necessary for this implementation.
 func (r *donutRepository) UpdateSerialMatchMakerUsers(ctx context.Context, matchMakerUsers MatchMakerUserEntities) (err error) {
 	trx := r.db.WithContext(ctx).Begin()
 
 	defer func() {
 		if err != nil {
-			trx.Rollback()
+			err = trx.Rollback().Error
 			return
 		}
 
-		trx.Commit()
+		err = trx.Commit().Error
+		return
 	}()
 
 	for _, matchMakerUser := range matchMakerUsers {
@@ -157,6 +171,19 @@ func (r *donutRepository) UpdateSerialMatchMakerUsers(ctx context.Context, match
 	}
 
 	return nil
+}
+
+func (r *donutRepository) UpdateSerialMatchMakerUser(ctx context.Context, matchMakerUser *MatchMakerUserEntity) error {
+	q := fmt.Sprintf("%s = ? AND %s = ?", MatchMakerSerialColumn, UserReferenceColumn)
+	updates := map[string]interface{}{
+		SerialColumn: matchMakerUser.Serial,
+		StatusColumn: MatchMakerUserStatusRunning,
+	}
+	return r.db.WithContext(ctx).
+		Model(&MatchMakerUser{}).
+		Where(q, matchMakerUser.MatchMakerSerial, matchMakerUser.UserReference).
+		Updates(updates).
+		Error
 }
 
 func (r *donutRepository) GetUsersByMatchMakerSerialAndUserReferences(ctx context.Context, matchMakerSerial string, userReferences []string) (MatchMakerUserEntities, error) {
@@ -188,4 +215,25 @@ func (r *donutRepository) GetUsersBySerial(ctx context.Context, serial string) (
 		return nil, err
 	}
 	return matchMakerUsers.ToEntities(), nil
+}
+
+func (r *donutRepository) UpdateMatchMakerStatusBySerial(ctx context.Context, serial string, status MatchMakerStatus) error {
+	q := fmt.Sprintf("%s = ?", SerialColumn)
+	return r.db.WithContext(ctx).
+		Model(&MatchMaker{}).
+		Where(q, serial).
+		Update(StatusColumn, status).
+		Error
+}
+
+func (r *donutRepository) UpdateStatusMatchMakerUser(ctx context.Context, matchMakerUser *MatchMakerUserEntity) error {
+	q := fmt.Sprintf("%s = ? AND %s = ?", MatchMakerSerialColumn, UserReferenceColumn)
+	updates := map[string]interface{}{
+		StatusColumn: matchMakerUser.Status,
+	}
+	return r.db.WithContext(ctx).
+		Model(&MatchMakerUser{}).
+		Where(q, matchMakerUser.MatchMakerSerial, matchMakerUser.UserReference).
+		Updates(updates).
+		Error
 }
