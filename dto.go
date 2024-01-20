@@ -35,7 +35,7 @@ func (MatchMaker) FromEntity(entity *MatchMakerEntity) *MatchMaker {
 		Description: entity.Description,
 		Status:      entity.Status,
 		StartTime:   entity.StartTime,
-		EndTime:     entity.StartTime.Add(entity.Duration),
+		EndTime:     entity.StartTime.Add(entity.Duration * Day),
 	}
 }
 
@@ -50,6 +50,7 @@ func (m *MatchMaker) ToEntity() *MatchMakerEntity {
 		Description: m.Description,
 		StartTime:   m.StartTime,
 		Duration:    m.EndTime.Sub(m.StartTime),
+		Status:      m.Status,
 	}
 }
 
