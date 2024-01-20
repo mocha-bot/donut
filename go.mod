@@ -15,9 +15,12 @@ require (
 )
 
 require (
+	github.com/avito-tech/go-transaction-manager/trm/v2 v2.0.0-rc7 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/stretchr/testify v1.8.3 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17 // indirect
@@ -25,6 +28,7 @@ require (
 
 require (
 	buf.build/gen/go/mocha/remcall/connectrpc/go v1.12.0-20231209063154-4f8472b3e8fa.1
+	github.com/avito-tech/go-transaction-manager/drivers/gorm/v2 v2.0.0-rc7
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/google/uuid v1.4.0
 	github.com/jackc/pgpassfile v1.0.0 // indirect
