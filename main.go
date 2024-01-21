@@ -43,13 +43,13 @@ func main() {
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
+	log.Info().Msgf("server is listening on %s", cfg.ApplicationConfig.Address())
+
 	// Run the server in a goroutine so that it doesn't block
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("failed to serve")
 		}
-
-		log.Info().Msgf("server is listening on %s", cfg.ApplicationConfig.Address())
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server

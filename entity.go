@@ -11,6 +11,7 @@ const (
 	MatchMakerStatusPending  MatchMakerStatus = "pending"
 	MatchMakerStatusRunning  MatchMakerStatus = "running"
 	MatchMakerStatusFinished MatchMakerStatus = "finished"
+	MatchMakerStatusStopped  MatchMakerStatus = "stopped"
 )
 
 type MatchMakerUserStatus string
@@ -19,6 +20,7 @@ const (
 	MatchMakerUserStatusPending  MatchMakerUserStatus = "pending"
 	MatchMakerUserStatusRunning  MatchMakerUserStatus = "running"
 	MatchMakerUserStatusFinished MatchMakerUserStatus = "finished"
+	MatchMakerUserStatusStopped  MatchMakerUserStatus = "stopped"
 )
 
 type Person struct {
@@ -183,8 +185,6 @@ func WithMatchMakerUserEntitySerial(serial string) MatchMakerUserEntityOption {
 }
 
 func (m *MatchMakerUserEntity) Build(options ...MatchMakerUserEntityOption) *MatchMakerUserEntity {
-	m.Serial = GenerateSerial()
-
 	for _, opt := range options {
 		opt(m)
 	}
